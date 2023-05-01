@@ -12,6 +12,8 @@ char g_szInputBuffer[256];
 // Initialize DirectInput Device
 bool InitDirectInput(HWND hWnd)
 {
+    uint8_t fCount = 0;
+
     // Initialize DirectInput
     if (FAILED(DirectInput8Create(GetModuleHandle(nullptr), DIRECTINPUT_VERSION, IID_IDirectInput8W, (void**)&g_pDI, nullptr)))
     {
@@ -37,9 +39,16 @@ bool InitDirectInput(HWND hWnd)
         return false;
     }
 
+RET:
     // Acquire DirectInput Device
     if (FAILED(g_pDIWheelDevice->Acquire()))
     {
+        if (fCount < 3) {
+            fCount++;
+            std::cout << "Acquire Failed, Retry " << (uint16_t)fCount << "/" << "3" << std::endl;
+            goto RET;
+        }
+        std::cout << "Acqure Failed." << std::endl;
         return false;
     }
 
@@ -88,29 +97,8 @@ void ReadInput()
 
 int main()
 {
-    // Allocate Console
-    AllocConsole();
-
-    // Redirect Standard Input and Output to Console
-    freopen("CONIN$", "r", stdin);
-    freopen("CONOUT$", "w", stdout);
-
-    // Create Window (or use an existing one)
-    HWND hWnd = CreateWindowW(
-        L"STATIC",      // Window class name
-        L"My Window",   // Window title
-        WS_OVERLAPPEDWINDOW,    // Window style
-        CW_USEDEFAULT,  // X position
-        CW_USEDEFAULT,  // Y position
-        640,            // Width
-        480,            // Height
-        nullptr,        // Parent window handle
-        nullptr,        // Menu handle
-        nullptr,        // Instance handle
-        nullptr         // Additional application data
-    );
-
     // Initialize DirectInput Device
+    HWND hWnd = GetDesktopWindow();
     if (!InitDirectInput(hWnd))
     {
         return 0;
