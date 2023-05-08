@@ -1,122 +1,150 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS
-#include <dinput.h>
 #include <iostream>
+#include <stdio.h>
+#include <wchar.h>
+#include <string.h>
+#include <stdlib.h>
+#include <windows.h>
+#include <conio.h>
+#include "hidapi.h"
 
-// DirectInput Device Object
-LPDIRECTINPUTDEVICE8W g_pDIWheelDevice = nullptr;
-LPDIRECTINPUT8 g_pDI = nullptr;
+using namespace std;
 
-// Input buffer
-char g_szInputBuffer[256];
-
-// Initialize DirectInput Device
-bool InitDirectInput(HWND hWnd)
-{
-    uint8_t fCount = 0;
-
-    // Initialize DirectInput
-    if (FAILED(DirectInput8Create(GetModuleHandle(nullptr), DIRECTINPUT_VERSION, IID_IDirectInput8W, (void**)&g_pDI, nullptr)))
-    {
-        return false;
-    }
+int main() {
+	int res;
+	unsigned char buf[256];
+	unsigned char read[16];
+#define MAX_STR 255
+	wchar_t wstr[MAX_STR];
+	hid_device* handle;
+	int i;
 
 
-    // Initialize DirectInput Device
-    if (FAILED(g_pDI->CreateDevice(GUID_SysMouse, &g_pDIWheelDevice, nullptr)))
-    {
-        return false;
-    }
+	struct hid_device_info* devs, * cur_dev;
 
-    // Set DirectInput Device Data Format
-    if (FAILED(g_pDIWheelDevice->SetDataFormat(&c_dfDIMouse)))
-    {
-        return false;
-    }
+	if (hid_init())
+		return -1;
 
-    // Set DirectInput Device Cooperation Level
-    if (FAILED(g_pDIWheelDevice->SetCooperativeLevel(hWnd, DISCL_FOREGROUND | DISCL_EXCLUSIVE)))
-    {
-        return false;
-    }
+	devs = hid_enumerate(0x0, 0x0);
+	cur_dev = devs;
+	while (cur_dev) {
+		printf("Device Found\n  type: %04hx %04hx\n  path: %s\n  serial_number: %ls", cur_dev->vendor_id, cur_dev->product_id, cur_dev->path, cur_dev->serial_number);
+		printf("\n");
+		printf("  Manufacturer: %ls\n", cur_dev->manufacturer_string);
+		printf("  Product:      %ls\n", cur_dev->product_string);
+		printf("  Release:      %hx\n", cur_dev->release_number);
+		printf("  Interface:    %d\n", cur_dev->interface_number);
+		printf("\n");
+		cur_dev = cur_dev->next;
+	}
+	hid_free_enumeration(devs);
 
-RET:
-    // Acquire DirectInput Device
-    if (FAILED(g_pDIWheelDevice->Acquire()))
-    {
-        if (fCount < 3) {
-            fCount++;
-            std::cout << "Acquire Failed, Retry " << (uint16_t)fCount << "/" << "3" << std::endl;
-            goto RET;
-        }
-        std::cout << "Acqure Failed." << std::endl;
-        return false;
-    }
+	// Set up the command buffer.
+	memset(buf, 0x00, sizeof(buf));
+	buf[0] = 0x01;
+	buf[1] = 0x81;
 
-    return true;
-}
 
-// Read Input from DirectInput Device
-void ReadInput()
-{
-    DWORD dwElements = 256;
-    HRESULT hr = g_pDIWheelDevice->GetDeviceData(sizeof(DIDEVICEOBJECTDATA), (LPDIDEVICEOBJECTDATA)&g_szInputBuffer, &dwElements, 0);
+	// Open the device using the VID, PID,
+	// and optionally the Serial number.
+	////handle = hid_open(0x4d8, 0x3f, L"12345");
+	handle = hid_open(0x044f, 0xb697, NULL);
+	if (!handle) {
+		printf("unable to open device\n");
+		return 1;
+	}
 
-    if (SUCCEEDED(hr))
-    {
-        // Process Input
-        for (DWORD i = 0; i < dwElements; i++)
-        {
-            DIDEVICEOBJECTDATA* pData = (DIDEVICEOBJECTDATA*)&g_szInputBuffer[i];
+	// Read the Manufacturer String
+	wstr[0] = 0x0000;
+	res = hid_get_manufacturer_string(handle, wstr, MAX_STR);
+	if (res < 0)
+		printf("Unable to read manufacturer string\n");
+	printf("Manufacturer String: %ls\n", wstr);
 
-            // Handle Input
-            switch (pData->dwOfs)
-            {
-            case DIMOFS_X:
-                // Handle X Axis Input
-                std::cout << "X Axis Input: " << pData->dwData << std::endl;
-                break;
+	// Read the Product String
+	wstr[0] = 0x0000;
+	res = hid_get_product_string(handle, wstr, MAX_STR);
+	if (res < 0)
+		printf("Unable to read product string\n");
+	printf("Product String: %ls\n", wstr);
 
-            case DIMOFS_Y:
-                // Handle Y Axis Input
-                std::cout << "Y Axis Input: " << pData->dwData << std::endl;
-                break;
+	// Read the Serial Number String
+	wstr[0] = 0x0000;
+	res = hid_get_serial_number_string(handle, wstr, MAX_STR);
+	if (res < 0)
+		printf("Unable to read serial number string\n");
+	printf("Serial Number String: (%d) %ls", wstr[0], wstr);
+	printf("\n");
 
-            case DIMOFS_Z:
-                // Handle Z Axis Input
-                std::cout << "Z Axis Input: " << pData->dwData << std::endl;
-                break;
+	// Read Indexed String 1
+	wstr[0] = 0x0000;
+	res = hid_get_indexed_string(handle, 1, wstr, MAX_STR);
+	if (res < 0)
+		printf("Unable to read indexed string 1\n");
+	printf("Indexed String 1: %ls\n", wstr);
 
-                // Add more cases to handle additional inputs as needed
+	// Set the hid_read() function to be non-blocking.
+	hid_set_nonblocking(handle, 1);
 
-            default:
-                break;
-            }
-        }
-    }
-}
+	// Try to read from the device. There shoud be no
+	// data here, but execution should not block.
+	res = hid_read(handle, buf, 17);
 
-int main()
-{
-    // Initialize DirectInput Device
-    HWND hWnd = GetDesktopWindow();
-    if (!InitDirectInput(hWnd))
-    {
-        return 0;
-    }
+	// Send a Feature Report to the device
+	buf[0] = 0x2;
+	buf[1] = 0xa0;
+	buf[2] = 0x0a;
+	buf[3] = 0x00;
+	buf[4] = 0x00;
+	res = hid_send_feature_report(handle, buf, 17);
+	if (res < 0) {
+		printf("Unable to send a feature report.\n");
+	}
 
-    // Main Game Loop
-    while (true)
-    {
-        // Read Input from DirectInput Device
-        ReadInput();
+	memset(buf, 0, sizeof(buf));
 
-        // Process Input and Update Game State
-        // ...
-    }
+	// Read a Feature Report from the device
+	buf[0] = 0x2;
+	res = hid_get_feature_report(handle, buf, sizeof(buf));
+	if (res < 0) {
+		printf("Unable to get a feature report.\n");
+		printf("%ls", hid_error(handle));
+	}
+	else {
+		// Print out the returned buffer.
+		printf("Feature Report\n   ");
+		for (i = 0; i < res; i++)
+			printf("%02hhx ", buf[i]);
+		printf("\n");
+	}
 
-    // Release DirectInput Device
-    g_pDIWheelDevice->Unacquire();
-    g_pDIWheelDevice->Release();
+	memset(buf, 0, sizeof(buf));
+	while (1) {
+		res = 0;
+		while (res == 0) {
+			res = hid_read(handle, read, sizeof(read));
+			for (i = 0; i < 16; i++) {
+				printf("%02hhx", read[i]);
+			}
+			printf("\n");
+			if (res == 0)
+				printf("waiting...\n");
+			if (res < 0)
+				printf("Unable to read()\n");
+			Sleep(500);
+		}
+		if (_kbhit())
+			break;
+	}
 
-    return 0;
+	hid_close(handle);
+
+	/* Free static HIDAPI objects. */
+	hid_exit();
+
+#ifdef WIN32
+	system("pause");
+#endif
+
+	return 0;
 }
