@@ -10,10 +10,12 @@
 
 using namespace std;
 
+void parseInput(unsigned char* dat);
+
 int main() {
 	int res;
 	unsigned char buf[256];
-	unsigned char read[16];
+	unsigned char read[32];
 #define MAX_STR 255
 	wchar_t wstr[MAX_STR];
 	hid_device* handle;
@@ -121,17 +123,19 @@ int main() {
 	memset(buf, 0, sizeof(buf));
 	while (1) {
 		res = 0;
+		int temp;
 		while (res == 0) {
 			res = hid_read(handle, read, sizeof(read));
-			for (i = 0; i < 16; i++) {
-				printf("%02hhx", read[i]);
+			for (i = 0; i < sizeof(read)/sizeof(unsigned char); i++) {
+				//printf("%02hhx ", read[i]);
+				parseInput(read);
 			}
 			printf("\n");
 			if (res == 0)
 				printf("waiting...\n");
 			if (res < 0)
 				printf("Unable to read()\n");
-			Sleep(500);
+			Sleep(100);
 		}
 		if (_kbhit())
 			break;
@@ -147,4 +151,21 @@ int main() {
 #endif
 
 	return 0;
+}
+
+void parseInput(unsigned char* dat)
+{
+	int temp;
+	printf("\n");
+	temp = dat[2] << sizeof(unsigned char);
+	temp |= dat[1];
+	printf("\nWheel: %d ", temp);
+
+	temp = dat[3] << sizeof(unsigned char);
+	temp |= dat[4];
+	printf("break: %d ", temp);
+
+	temp = dat[5] << sizeof(unsigned char);
+	temp |= dat[6];
+	printf("accelerator: %d ", temp);
 }
