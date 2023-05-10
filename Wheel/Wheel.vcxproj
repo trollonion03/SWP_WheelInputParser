@@ -138,7 +138,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Socket.cpp" />
+    <ClCompile Include="Socket.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Wheel.cpp" />
   </ItemGroup>
   <ItemGroup>

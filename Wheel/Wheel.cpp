@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <windows.h>
 #include <conio.h>
+#include <chrono>
 #include "hidapi.h"
 
 using namespace std;
@@ -15,7 +16,7 @@ void parseInput(unsigned char* dat);
 int main() {
 	int res;
 	unsigned char buf[256];
-	unsigned char read[32];
+	unsigned char read[64];
 #define MAX_STR 255
 	wchar_t wstr[MAX_STR];
 	hid_device* handle;
@@ -127,15 +128,16 @@ int main() {
 		while (res == 0) {
 			res = hid_read(handle, read, sizeof(read));
 			for (i = 0; i < sizeof(read)/sizeof(unsigned char); i++) {
-				//printf("%02hhx ", read[i]);
-				parseInput(read);
+				printf("%02hhx ", read[i]);
 			}
+			parseInput(read);
+			system("cls");
 			printf("\n");
 			if (res == 0)
 				printf("waiting...\n");
 			if (res < 0)
 				printf("Unable to read()\n");
-			Sleep(100);
+			//Sleep(1);
 		}
 		if (_kbhit())
 			break;
@@ -155,17 +157,18 @@ int main() {
 
 void parseInput(unsigned char* dat)
 {
+	//system("cls");
 	int temp;
 	printf("\n");
-	temp = dat[2] << sizeof(unsigned char);
-	temp |= dat[1];
-	printf("\nWheel: %d ", temp);
+	//temp = (dat[2] << 8) | dat[1];
+	temp = dat[2];
+	printf("\nWheel: %03d ", (int)(temp));
 
-	temp = dat[3] << sizeof(unsigned char);
-	temp |= dat[4];
-	printf("break: %d ", temp);
+	//temp = (dat[3] << 8) | dat[4];
+	temp = dat[4];
+	printf("break: %03d ", temp);
 
-	temp = dat[5] << sizeof(unsigned char);
-	temp |= dat[6];
-	printf("accelerator: %d ", temp);
+	//temp = (dat[5] << 8) | dat[6];
+	temp = dat[6];
+	printf("accelerator: %03d ", temp);
 }

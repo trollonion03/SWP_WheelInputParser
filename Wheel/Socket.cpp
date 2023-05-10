@@ -141,8 +141,7 @@ DWORD WINAPI clientHandler(LPVOID lpParam)
     char sendbuf[DEFAULT_BUFLEN];
 
     GetLocalTime(&sys_time);
-    sprintf_s(sendbuf, DEFAULT_BUFLEN, "%04d,%04d,%04d", sys_time.wYear,
-        sys_time.wMonth, sys_time.wDay);
+    sprintf_s(sendbuf, DEFAULT_BUFLEN, "%03d,%03d,%03d", 332, 512, 512);
 
     int iSendResult = send(ClientSocket, sendbuf, strlen(sendbuf), 0);
 
