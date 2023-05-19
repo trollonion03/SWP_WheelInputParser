@@ -13,6 +13,8 @@
 #define DEFAULT_BUFLEN 512
 #define DEFAULT_PORT "27015"
 
+DWORD WINAPI clientHandler(LPVOID lpParam);
+
 int main(void)
 {
     WSADATA wsaData;
@@ -113,7 +115,6 @@ int main(void)
             CloseHandle(hThread);
         }
     }
-
     // No longer need server socket
     closesocket(ListenSocket);
 
@@ -151,13 +152,15 @@ DWORD WINAPI clientHandler(LPVOID lpParam)
     }
 
     // shutdown the connection since we're done
+#if 0
     int iResult = shutdown(ClientSocket, SD_SEND);
     if (iResult == SOCKET_ERROR)
     {
         printf("shutdown failed with error: %d\n", WSAGetLastError());
     }
+#endif
 
     // cleanup
-    closesocket(ClientSocket);
+    //closesocket(ClientSocket);
     return 0;
 }

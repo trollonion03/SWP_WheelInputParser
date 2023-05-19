@@ -30,16 +30,28 @@ int main() {
 
 	devs = hid_enumerate(0x0, 0x0);
 	cur_dev = devs;
+	bool flag = false;
+#if 1
 	while (cur_dev) {
-		printf("Device Found\n  type: %04hx %04hx\n  path: %s\n  serial_number: %ls", cur_dev->vendor_id, cur_dev->product_id, cur_dev->path, cur_dev->serial_number);
-		printf("\n");
-		printf("  Manufacturer: %ls\n", cur_dev->manufacturer_string);
-		printf("  Product:      %ls\n", cur_dev->product_string);
-		printf("  Release:      %hx\n", cur_dev->release_number);
-		printf("  Interface:    %d\n", cur_dev->interface_number);
-		printf("\n");
+		if (cur_dev->vendor_id == 0x044f && cur_dev->product_id == 0xb697) {
+			printf("Device Found\n  type: %04hx %04hx\n  path: %s\n  serial_number: %ls", cur_dev->vendor_id, cur_dev->product_id, cur_dev->path, cur_dev->serial_number);
+			printf("\n");
+			printf("  Manufacturer: %ls\n", cur_dev->manufacturer_string);
+			printf("  Product:      %ls\n", cur_dev->product_string);
+			printf("  Release:      %hx\n", cur_dev->release_number);
+			printf("  Interface:    %d\n", cur_dev->interface_number);
+			printf("\n");
+			flag = true;
+		}
 		cur_dev = cur_dev->next;
 	}
+
+	if (!flag) {
+		printf("Device not Found!\n");
+		return 0;
+	}
+
+#endif;
 	hid_free_enumeration(devs);
 
 	// Set up the command buffer.
@@ -127,11 +139,13 @@ int main() {
 		int temp;
 		while (res == 0) {
 			res = hid_read(handle, read, sizeof(read));
+#if 0
 			for (i = 0; i < sizeof(read)/sizeof(unsigned char); i++) {
 				printf("%02hhx ", read[i]);
 			}
+#endif
 			parseInput(read);
-			system("cls");
+			//system("cls");
 			printf("\n");
 			if (res == 0)
 				printf("waiting...\n");
