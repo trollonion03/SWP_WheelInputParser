@@ -7,6 +7,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <conio.h>
 #include "hidapi.h"
@@ -21,127 +22,176 @@
 DWORD WINAPI clientHandler(LPVOID lpParam);
 
 hid_device* handle;
+bool mode = false;
 
 int main(void)
 {
-    //Hid reader
-    int res;
-    unsigned char buf[256];
-#define MAX_STR 255
-    wchar_t wstr[MAX_STR];
-    
-    int i;
-    struct hid_device_info* devs, * cur_dev;
+    uint16_t on = 1;
 
-    if (hid_init())
-        return -1;
+    printf("SELECT MODE\n");
+    printf("1) DEFAULT MODE\n");
+    printf("2) TEST MODE    (NO INPUT DEVICE)\n");
+    printf("Q) QUIT\n");
+    while (on)
+    {
+        if (_kbhit())
+        {
+            int ch = _getch();
+            printf("SELECT: ");
+            _putch(ch);
 
-    devs = hid_enumerate(0x0, 0x0);
-    cur_dev = devs;
-    bool flag = false;
-
-    while (cur_dev) {
-        if (cur_dev->vendor_id == 0x044f && cur_dev->product_id == 0xb697) {
-            printf("Device Found\n  type: %04hx %04hx\n  path: %s\n  serial_number: %ls", cur_dev->vendor_id, cur_dev->product_id, cur_dev->path, cur_dev->serial_number);
-            printf("\n");
-            printf("  Manufacturer: %ls\n", cur_dev->manufacturer_string);
-            printf("  Product:      %ls\n", cur_dev->product_string);
-            printf("  Release:      %hx\n", cur_dev->release_number);
-            printf("  Interface:    %d\n", cur_dev->interface_number);
-            printf("\n");
-            flag = true;
+            switch (ch) {
+            case '1':
+                printf(") DEFAULT MODE\n");
+                on = 0;
+                break;
+            case '2':
+                printf(") TEST MODE\n");
+                on = 0;
+                mode = true;
+                break;
+            case 'q':
+                printf(") QUIT\n");
+                return 0;
+                break;
+            case 'Q':
+                return 0;
+                break;
+            }
+            if (on != 0)
+            {
+                system("cls");
+                printf("SELECT MODE (1, 2)\n");
+                printf("1) DEFAULT MODE\n");
+                printf("2) TEST MODE    (NO INPUT DEVICE)\n");
+                printf("Q) QUIT\n");
+            }
         }
-        cur_dev = cur_dev->next;
     }
+    printf("--------------------------------------------\n");
 
-    if (!flag) {
-        printf("Device not Found!\n");
-        return 0;
-    }
+    if (!mode)
+    {
+        //Hid reader
+        int res;
+        unsigned char buf[256];
+#define MAX_STR 255
+        wchar_t wstr[MAX_STR];
 
-    hid_free_enumeration(devs);
+        int i;
+        struct hid_device_info* devs, * cur_dev;
 
-    // Set up the command buffer.
-    memset(buf, 0x00, sizeof(buf));
-    buf[0] = 0x01;
-    buf[1] = 0x81;
+        if (hid_init())
+            return -1;
 
+        devs = hid_enumerate(0x0, 0x0);
+        cur_dev = devs;
+        bool flag = false;
+#if 0
+        while (cur_dev) {
+            if (cur_dev->vendor_id == 0x044f && cur_dev->product_id == 0xb697) {
+                printf("Device Found\n  type: %04hx %04hx\n  path: %s\n  serial_number: %ls", cur_dev->vendor_id, cur_dev->product_id, cur_dev->path, cur_dev->serial_number);
+                printf("\n");
+                printf("  Manufacturer: %ls\n", cur_dev->manufacturer_string);
+                printf("  Product:      %ls\n", cur_dev->product_string);
+                printf("  Release:      %hx\n", cur_dev->release_number);
+                printf("  Interface:    %d\n", cur_dev->interface_number);
+                printf("\n");
+                flag = true;
+            }
+            cur_dev = cur_dev->next;
+        }
 
-    // Open the device using the VID, PID,
-    // and optionally the Serial number.
-    ////handle = hid_open(0x4d8, 0x3f, L"12345");
-    handle = hid_open(0x044f, 0xb697, NULL);
-    if (!handle) {
-        printf("unable to open device\n");
-        return 1;
-    }
+        if (!flag) {
+            printf("Device not Found!\n");
+            return 0;
+        }
+#endif
 
-    // Read the Manufacturer String
-    wstr[0] = 0x0000;
-    res = hid_get_manufacturer_string(handle, wstr, MAX_STR);
-    if (res < 0)
-        printf("Unable to read manufacturer string\n");
-    printf("Manufacturer String: %ls\n", wstr);
+        hid_free_enumeration(devs);
 
-    // Read the Product String
-    wstr[0] = 0x0000;
-    res = hid_get_product_string(handle, wstr, MAX_STR);
-    if (res < 0)
-        printf("Unable to read product string\n");
-    printf("Product String: %ls\n", wstr);
+        // Set up the command buffer.
+        memset(buf, 0x00, sizeof(buf));
+        buf[0] = 0x01;
+        buf[1] = 0x81;
 
-    // Read the Serial Number String
-    wstr[0] = 0x0000;
-    res = hid_get_serial_number_string(handle, wstr, MAX_STR);
-    if (res < 0)
-        printf("Unable to read serial number string\n");
-    printf("Serial Number String: (%d) %ls", wstr[0], wstr);
-    printf("\n");
+        // Open the device using the VID, PID,
+        // and optionally the Serial number.
+        ////handle = hid_open(0x4d8, 0x3f, L"12345");
+        handle = hid_open(0x044f, 0xb697, NULL);
+        if (!handle) {
+            printf("unable to open device\n");
+            return 1;
+        }
 
-    // Read Indexed String 1
-    wstr[0] = 0x0000;
-    res = hid_get_indexed_string(handle, 1, wstr, MAX_STR);
-    if (res < 0)
-        printf("Unable to read indexed string 1\n");
-    printf("Indexed String 1: %ls\n", wstr);
+#if 0
+        // Read the Manufacturer String
+        wstr[0] = 0x0000;
+        res = hid_get_manufacturer_string(handle, wstr, MAX_STR);
+        if (res < 0)
+            printf("Unable to read manufacturer string\n");
+        printf("Manufacturer String: %ls\n", wstr);
 
-    // Set the hid_read() function to be non-blocking.
-    hid_set_nonblocking(handle, 1);
+        // Read the Product String
+        wstr[0] = 0x0000;
+        res = hid_get_product_string(handle, wstr, MAX_STR);
+        if (res < 0)
+            printf("Unable to read product string\n");
+        printf("Product String: %ls\n", wstr);
 
-    // Try to read from the device. There shoud be no
-    // data here, but execution should not block.
-    res = hid_read(handle, buf, 17);
-
-    // Send a Feature Report to the device
-    buf[0] = 0x2;
-    buf[1] = 0xa0;
-    buf[2] = 0x0a;
-    buf[3] = 0x00;
-    buf[4] = 0x00;
-    res = hid_send_feature_report(handle, buf, 17);
-    if (res < 0) {
-        printf("Unable to send a feature report.\n");
-    }
-
-    memset(buf, 0, sizeof(buf));
-
-    // Read a Feature Report from the device
-    buf[0] = 0x2;
-    res = hid_get_feature_report(handle, buf, sizeof(buf));
-    if (res < 0) {
-        printf("Unable to get a feature report.\n");
-        printf("%ls", hid_error(handle));
-    }
-    else {
-        // Print out the returned buffer.
-        printf("Feature Report\n   ");
-        for (i = 0; i < res; i++)
-            printf("%02hhx ", buf[i]);
+        // Read the Serial Number String
+        wstr[0] = 0x0000;
+        res = hid_get_serial_number_string(handle, wstr, MAX_STR);
+        if (res < 0)
+            printf("Unable to read serial number string\n");
+        printf("Serial Number String: (%d) %ls", wstr[0], wstr);
         printf("\n");
+
+        // Read Indexed String 1
+        wstr[0] = 0x0000;
+        res = hid_get_indexed_string(handle, 1, wstr, MAX_STR);
+        if (res < 0)
+            printf("Unable to read indexed string 1\n");
+        printf("Indexed String 1: %ls\n", wstr);
+
+        // Set the hid_read() function to be non-blocking.
+        hid_set_nonblocking(handle, 1);
+
+        // Try to read from the device. There shoud be no
+        // data here, but execution should not block.
+        res = hid_read(handle, buf, 17);
+
+        // Send a Feature Report to the device
+        buf[0] = 0x2;
+        buf[1] = 0xa0;
+        buf[2] = 0x0a;
+        buf[3] = 0x00;
+        buf[4] = 0x00;
+        res = hid_send_feature_report(handle, buf, 17);
+        if (res < 0) {
+            printf("Unable to send a feature report.\n");
+        }
+
+        memset(buf, 0, sizeof(buf));
+
+        // Read a Feature Report from the device
+        buf[0] = 0x2;
+        res = hid_get_feature_report(handle, buf, sizeof(buf));
+        if (res < 0) {
+            printf("Unable to get a feature report.\n");
+            printf("%ls", hid_error(handle));
+        }
+        else {
+            // Print out the returned buffer.
+            printf("Feature Report\n   ");
+            for (i = 0; i < res; i++)
+                printf("%02hhx ", buf[i]);
+            printf("\n");
+        }
+#endif
+        memset(buf, 0, sizeof(buf));
     }
-
-    memset(buf, 0, sizeof(buf));
-
+    
     //WinSock2 Server
     WSADATA wsaData;
     int iResult;
@@ -215,6 +265,14 @@ int main(void)
         return 1;
     }
 
+    if(!mode)
+        printf("--------------------------------------------\n");
+    printf("Socket is running on 127.0.0.1:");
+    printf(DEFAULT_PORT);
+    printf("\n");
+    printf("Q) QUIT\n");
+    printf("--------------------------------------------\n");
+
     // Accept a client socket
     while (1)
     {
@@ -239,6 +297,15 @@ int main(void)
         {
             // Detach the thread and let it run on its own
             CloseHandle(hThread);
+        }
+
+        if (_kbhit()) {
+            int ch = _getch();
+
+            if (ch == 'Q' || ch == 'q') {
+                CloseHandle(hThread);
+                break;
+            }
         }
     }
     // No longer need server socket
@@ -269,8 +336,13 @@ DWORD WINAPI clientHandler(LPVOID lpParam)
     unsigned char read[64];
 
     while (1) {
-        int res = hid_read(handle, read, sizeof(read));
-        sprintf_s(sendbuf, DEFAULT_BUFLEN, "%03d,%03d,%03d\n", (int)read[2], read[4], read[6]);
+        if (!mode) {
+            int res = hid_read(handle, read, sizeof(read));
+            sprintf_s(sendbuf, DEFAULT_BUFLEN, "%03d,%03d,%03d\n", (int)read[2], 255-read[4], 255-read[6]);
+        }
+        else {
+            sprintf_s(sendbuf, DEFAULT_BUFLEN, "%03d,%03d,%03d\n", 125, 0, 230);
+        }
 
 
         int iSendResult = send(ClientSocket, sendbuf, strlen(sendbuf), 0);
@@ -282,9 +354,6 @@ DWORD WINAPI clientHandler(LPVOID lpParam)
         }
 
         Sleep(100);
-
-        if (_kbhit())
-            break;
     }
 
     // shutdown the connection since we're done
@@ -298,3 +367,4 @@ DWORD WINAPI clientHandler(LPVOID lpParam)
     closesocket(ClientSocket);
     return 0;
 }
+
