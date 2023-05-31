@@ -323,7 +323,14 @@ int main(void)
 
     // cleanup
     closesocket(ClientSocket);
+    closesocket(ListenSocket);
     WSACleanup();
+    
+    if (handle) {
+        hid_close(handle);
+        handle = NULL;
+    }
+    hid_exit();
     return 0;
 }
 
@@ -338,10 +345,10 @@ DWORD WINAPI clientHandler(LPVOID lpParam)
     while (1) {
         if (!mode) {
             int res = hid_read(handle, read, sizeof(read));
-            sprintf_s(sendbuf, DEFAULT_BUFLEN, "%03d,%03d,%03d\n", (int)read[2], 255-read[4], 255-read[6]);
+            sprintf_s(sendbuf, DEFAULT_BUFLEN, "%03d,%03d,%03d,1", (int)read[2], 255-read[4], 255-read[6]);
         }
         else {
-            sprintf_s(sendbuf, DEFAULT_BUFLEN, "%03d,%03d,%03d\n", 125, 0, 230);
+            sprintf_s(sendbuf, DEFAULT_BUFLEN, "%03d,%03d,%03d,1", 127, 0, 0);
         }
 
 
@@ -353,7 +360,7 @@ DWORD WINAPI clientHandler(LPVOID lpParam)
             break;
         }
 
-        Sleep(100);
+        Sleep(150);
     }
 
     // shutdown the connection since we're done
